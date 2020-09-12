@@ -8,4 +8,4 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - run: |
-      xcodebuild test -project TestProjects/Starter/BullsEye/BullsEye.xcodeproj -scheme BullsEye -destination 'platform=iOS Simulator,name=iPhone 11 Pro,OS=latest'
+        xcodebuild test -project TestProjects/Starter/BullsEye/BullsEye.xcodeproj -scheme BullsEye -destination 'platform=iOS Simulator,name=iPhone 11 Pro,OS=latest'
