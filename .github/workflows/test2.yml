@@ -7,8 +7,8 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: macOS-latest
     steps:
     - uses: actions/checkout@v2
     - run: |
-      xcodebuild build -project TestProjects/Starter/BullsEye/BullsEye.xcodeproj -destination 'platform=iOS Simulator,name=iPhone 11 Pro,OS=latest'
+      ls -l
