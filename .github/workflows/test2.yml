@@ -1,16 +1,14 @@
 name: "build-test"
-on: # rebuild any PRs and main branch changes
+on:
   pull_request:
   push:
     branches:
       - master
 
 jobs:
-  build: # make sure build/ci work properly
-    runs-on: macOS-latest
-    timeout-minutes: 30
+  Build:
+    runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
-    - name: Show information
-      run: |
-        ls -l
+    - run: |
+      xcodebuild build -project TestProjects/Starter/BullsEye/BullsEye.xcodeproj -destination 'platform=iOS Simulator,name=iPhone 11 Pro,OS=latest'
