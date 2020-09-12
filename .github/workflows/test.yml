@@ -1,0 +1,100 @@
+name: "build-test"
+on: # rebuild any PRs and main branch changes
+  pull_request:
+  push:
+    branches:
+      - master
+
+jobs:
+  build: # make sure build/ci work properly
+    runs-on: macOS-latest
+    timeout-minutes: 30
+    steps:
+    - uses: actions/checkout@v2
+    - name: Show information
+      run: |
+        man xcodebuild | col -bx > xcodebuild_man.txt
+        info xcodebuild > xcodebuild_info.txt
+        xcodebuild -help > xcodebuild_help.txt
+    - uses: actions/upload-artifact@v2
+      with:
+        name: xcodebuild_doc
+        path: |
+          xcodebuild_man.txt
+          xcodebuild_info.txt
+          xcodebuild_help.txt
+          xcodebuild.pdf
+    - name: Prepare Provisioning Profiles
+      run: |
+        echo "*** before copy provisioning files"
+        echo "*** print the xcode-select version"
+        xcode-select --version
+        echo "*** print the path for the active developer directory"
+        xcode-select --print-path
+        echo "*** print a list of available destinations you can use to build and run Xcode unit tests"
+        instruments -s devices
+        #ls -l ~/Library/MobileDevice/Provisioning\ Profiles
+        ditto provisioning/app.mobileprovision ~/Library/MobileDevice/Provisioning\ Profiles/
+        echo "*** after copy provisioning files"
+        ls -l ~/Library/MobileDevice/Provisioning\ Profiles
+
+        security create-keychain -p "" build.keychain
+        security import provisioning/Certificates.p12 -t agg -k ~/Library/Keychains/build.keychain -P "${{ secrets.CERTIFICATE_PASSWORD }}" -A
+
+        security list-keychains -s ~/Library/Keychains/build.keychain
+        security default-keychain -s ~/Library/Keychains/build.keychain
+        security unlock-keychain -p "" ~/Library/Keychains/build.keychain
+
+        security set-key-partition-list -S apple-tool:,apple: -s -k "" ~/Library/Keychains/build.keychain
+        security find-identity -v -p codesigning
+
+        xcodebuild -list -project Swiftris.xcodeproj
+        xcodebuild -list -workspace Swiftris.xcodeproj/project.xcworkspace
+
+#-rw-r--r--  1 chenchang  staff  3261  9  4 07:03 Certificates.p12
+#-rw-r--r--  1 chenchang  staff  3261  9  4 07:00 Untitled.p12
+#-rw-r--r--  1 chenchang  staff  7438  9  4 06:38 app.mobileprovision
+#-rw-r--r--  1 chenchang  staff  7438  9  4 06:30 ffa23e17-ffc0-4bd3-9558-8b2b561ac12e.mobileprovision
+#-rw-r--r--  1 chenchang  staff     0  9  4 06:38 xx
+
+# /Users/chenchang/Library/MobileDevice/Provisioning Profiles*: No such file or directory
+#chenchang@chenchangdeiMac Swiftris % cp ~/Library/MobileDevice/Provisioning\ Profiles/* provisioning
+#chenchang@chenchangdeiMac Swiftris % ls -l provisioning 
+#total 16
+#-rw-r--r--  1 chenchang  staff  7438  9  4 06:30 ffa23e17-ffc0-4bd3-9558-8b2b561ac12e.mobileprovision
+#chenchang@chenchangdeiMac Swiftris % git add provisioning/ffa23e17-ffc0-4bd3-9558-8b2b561ac12e.mobileprovision 
+#chenchang@chenchangdeiMac Swiftris % git commit -m "Add provision profiles"
+#[master 29765cb] Add provision profiles
+#
+    - name: Build
+      run: |
+        xcodebuild clean
+        xcodebuild build-for-testing -scheme Swiftris -destination 'platform=iOS Simulator,name=iPhone 11 Pro,OS=13.7'
+
+#    - uses: Apple-Actions/import-codesign-certs@v1
+#      with:
+#        p12-file-base64: ${{ secrets.CERTIFICATES_FILE_BASE64 }}
+#        p12-password: ${{ secrets.CERTIFICATES_PASSWORD }}
+#    - uses: Apple-Actions/download-provisioning-profiles@v1
+#      with:
+#        bundle-id: codes.orj.Example-iOS
+#        issuer-id: ${{ secrets.APPSTORE_ISSUER_ID }}
+#        api-key-id: ${{ secrets.APPSTORE_KEY_ID }}
+#        api-private-key: ${{ secrets.APPSTORE_PRIVATE_KEY }}
+#    - name: "#️⃣ Generate Build Number"
+#      id: buildnumber
+#      uses: einaregilsson/build-number@v2
+#      with:
+#        token: ${{ secrets.github_token }}
+#    - run: ./Build
+#    - uses: Apple-Actions/upload-testflight-build@master
+#      with:
+#        app-path: .build/Artifacts/Example-iOS.ipa/Example-iOS.ipa
+#        issuer-id: ${{ secrets.APPSTORE_ISSUER_ID }}
+#        api-key-id: ${{ secrets.APPSTORE_KEY_ID }}
+#        api-private-key: ${{ secrets.APPSTORE_PRIVATE_KEY }}
+    - name: Test
+      run: |
+          xcodebuild test-without-building -scheme Swiftris -destination "platform=iOS Simulator,name=iPhone 11 Pro,OS=latest" -only-testing SwiftrisTests/testExample
+          xcodebuild test-without-building -scheme Swiftris -destination "platform=iOS Simulator,name=iPhone 11 Pro,OS=latest" -only-testing SwiftrisUITests/testExample
+
