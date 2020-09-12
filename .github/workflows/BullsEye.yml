@@ -1,0 +1,11 @@
+name: Build-Test
+on:
+  push
+
+jobs:
+  Build:
+    runs-on: macOS-latest
+    steps:
+    - uses: actions/checkout@v2
+    - run: |
+        xcodebuild -project TestProjects/Starter/BullsEye/BullsEye.xcodeproj -destination 'platform=iOS Simulator,name=iPhone 11 Pro,OS=latest'
